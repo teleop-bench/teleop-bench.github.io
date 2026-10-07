@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Can Bluetooth Low Energy 6.0 Back Up Wi-Fi Robotic Teleop? Throughput, Latency, FSU, Soak, and Physical Stop Testing</title>
+<meta name="description" content="Benchmarking bluetooth low energy hardware, at peak one-way throughput of up to ~195 KB/s is measured using the open source Zephyr GATT stack. Duplex GATT Zephyr numbers exceed 200 KB/s. Included for ">
+<meta property="og:title" content="Can Bluetooth Low Energy 6.0 Back Up Wi-Fi Robotic Teleop? Throughput, Latency, FSU, Soak, and Physical Stop Testing">
+<meta property="og:description" content="Benchmarking bluetooth low energy hardware, at peak one-way throughput of up to ~195 KB/s is measured using the open source Zephyr GATT stack. Duplex GATT Zephyr numbers exceed 200 KB/s. Included for ">
+<meta property="og:type" content="article">
+<style>
+:root{--ink:#1d1d1b;--muted:#5f5e59;--paper:#fbfaf6;--rule:#dcd9cf;--link:#7a3e2c;--code:#f1efe7}
+@media (prefers-color-scheme:dark){:root{--ink:#e9e7e1;--muted:#a3a19a;--paper:#161614;--rule:#3a3934;--link:#e0a184;--code:#22221f}}
+html{background:var(--paper)}body{margin:0;background:var(--paper);color:var(--ink);font:1.08rem/1.65 Charter,"Iowan Old Style",Georgia,serif;-webkit-text-size-adjust:100%}
+main{max-width:44rem;margin:0 auto;padding:2.5rem 16px 4rem}
+h1{font-size:2.1rem;line-height:1.2;font-weight:600;margin:0 0 1.6rem}
+h2{font-size:1.45rem;margin:2.6rem 0 .8rem;line-height:1.3}h3{font-size:1.15rem;margin:2rem 0 .6rem}h4{font-size:1rem;margin:1.6rem 0 .5rem}
+p,li{hyphens:auto}a{color:var(--link);text-underline-offset:2px}
+figure{margin:1.6rem 0;text-align:center}figure img{max-width:100%;height:auto;border-radius:4px}
+table{border-collapse:collapse;width:100%;margin:1.4rem 0;font-size:.92rem;display:block;overflow-x:auto}
+th,td{border-bottom:1px solid var(--rule);padding:.45rem .6rem;text-align:left;white-space:nowrap}th{font-weight:600}
+pre,code{font:.86rem/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--code);border-radius:4px}
+pre{padding:.9rem 1rem;overflow-x:auto;white-space:pre-wrap}code{padding:.1rem .3rem}pre code{padding:0;background:none}
+hr{border:0;border-top:1px solid var(--rule);margin:2.5rem 0}
+.note-repo{font-size:.85rem;color:var(--muted)}
+footer{max-width:44rem;margin:0 auto;padding:1.4rem 16px 3rem;border-top:1px solid var(--rule);font-size:.9rem;color:var(--muted)}
+footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<h1>Can Bluetooth Low Energy 6.0 Back Up Wi-Fi Robotic Teleop? Throughput, Latency, FSU, Soak, and Physical Stop Testing</h1>
+<h2>I. Executive Summary</h2>
+<p>Benchmarking bluetooth low energy hardware, at peak one-way throughput of up to ~195 KB/s is measured using the open source <a href="https://github.com/zephyrproject-rtos/zephyr">Zephyr</a> GATT stack. Duplex GATT Zephyr numbers exceed 200 KB/s. Included for side-by-side comparison are Nordic Semi closed sourced SDC runs. </p>
+<p>A 25 hour soak test reveals a stable connection in a close proximity bench test, and shows zero disconnects, timeouts across 4.9 million round trips. If heartbeat stops, a watchdog confirms via hardware that a STOP command is implemented within just over 200 ms. </p>
+<p>Results indicate that promise is shown for utilizing BLE 6 for a backup teleoperation communication, and control channel. BLE 6 throughput is adequate for high priority streams such as heartbeat, safety, control etc.</p>
+<p>As far as I'm aware, these are the first reproducible BLE 6 Frame Space Update (FSU) numbers to be published. FSU increases throughput by upwards of 20%, while also reducing latency in near every SDC and Zephyr configuration tested by 2 to 9 ms (Zephyr), with idle latency unchanged. FSU shows improvements for one-way, duplex, GATT, and CoC BLE regimes. SDC lowers by 1 - 20 ms, at most loaded stages.</p>
+<p>BLE 6 is not perfectly independent of 5 GHz Wi-Fi failures, nor is it perfectly correlated with 5 GHz Wi-Fi failures. Therefore BLE 6 may be examined as a robustness upgrade improvement over 5 GHz Wi-Fi robotics teleoperations.</p>
+<p>The results do not prove safety certification, nor guaranteed reliability performance. </p>
+<p>Benchmark methodology, firmware (with the exception of SDC), and software is open source. Recreation is encouraged, and welcomed. </p>
+<h2>II. Key results</h2>
+<p>Key results are shared below. Verification and recreation of results is encouraged using recreation steps, and firmware/software found in section VII. </p>
+<h3>Throughput</h3>
+<p>Table 1: selected one-way and duplex throughput at the stated intervals (KB/s)</p>
+<table>
+<thead>
+<tr>
+<th>Data path</th>
+<th>Stack</th>
+<th>No FSU</th>
+<th>FSU</th>
+<th>Increase %</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GATT one-way</td>
+<td><a href="https://github.com/zephyrproject-rtos/zephyr">Zephyr</a></td>
+<td>158 KB/s @ 7.5 ms</td>
+<td>189 KB/s @ 7.5 ms</td>
+<td>20.2%</td>
+</tr>
+<tr>
+<td>GATT one-way</td>
+<td><a href="https://github.com/nrfconnect/sdk-nrf/releases/tag/v3.4.0">SDC</a></td>
+<td>127 KB/s @ 7.5 ms</td>
+<td>158 KB/s @ 7.5 ms</td>
+<td>24.4%</td>
+</tr>
+<tr>
+<td>L2CAP CoC one-way</td>
+<td>Zephyr</td>
+<td>155 KB/s @ 15 ms</td>
+<td>186 KB/s @ 15 ms</td>
+<td>19.8%</td>
+</tr>
+<tr>
+<td>L2CAP CoC one-way</td>
+<td>SDC</td>
+<td>156 KB/s @ 15 ms</td>
+<td>172 KB/s @ 15 ms</td>
+<td>10.0%</td>
+</tr>
+<tr>
+<td>GATT duplex*</td>
+<td>Zephyr</td>
+<td>184 KB/s @ 25 ms</td>
+<td>201.5 KB/s @ 25 ms</td>
+<td>9.5%</td>
+</tr>
+<tr>
+<td>GATT duplex*</td>
+<td>SDC</td>
+<td>186 KB/s @ 25 ms</td>
+<td>206 KB/s @ 25 ms</td>
+<td>10.8%</td>
+</tr>
+<tr>
+<td>CoC duplex*</td>
+<td>Zephyr</td>
+<td>187 KB/s @ 25 ms</td>
+<td>205 KB/s @ 25 ms</td>
+<td>9.6%</td>
+</tr>
+<tr>
+<td>CoC duplex*</td>
+<td>SDC</td>
+<td>186 KB/s @ 25 ms</td>
+<td>205 KB/s @ 25 ms</td>
+<td>10.2%</td>
+</tr>
+</tbody>
+</table>
+<p>* duplex entries throughput are both directions summed, measured at 25 ms. duplex FSU gain appears only at longer intervals. At shorter intervals of 7.5 ms and 15ms, duplex FSU gain is nil, or smaller.   </p>
+<p>Duplex/aggregate improvement depends on the interval (see section IV FSU duplex illustration). At 7.5 ms, and 15 ms there is no FSU gain (0) for GATT. In the benchmark's CoC test, we send independent traffic in each direction over one channel. </p>
+<p>Solid lines represent BLE 6 frame space update (FSU) firmware measurements. Dashed lines represent base Zephyr, or Nordic Soft Device Controller (SDC) firmware (sans FSU).</p>
+<figure><img src="img/screenshot-2026-10-07-at-9-55-05-am.png" alt="" loading="lazy"></figure>
+
+<figure><img src="img/screenshot-2026-10-07-at-11-12-12-am.png" alt="" loading="lazy"></figure>
+
+<figure><img src="img/screenshot-2026-10-07-at-9-55-22-am.png" alt="" loading="lazy"></figure>
+
+<figure><img src="img/screenshot-2026-10-05-at-10-08-07-am.png" alt="" loading="lazy"></figure>
+
+<figure><img src="img/screenshot-2026-10-05-at-10-10-01-am.png" alt="" loading="lazy"></figure>
+
+<figure><img src="img/screenshot-2026-10-07-at-9-55-44-am.png" alt="" loading="lazy"></figure>
+
+<h2>FSU and other Throughput Observations</h2>
+<ol>
+<li>Enabling FSU causes a bump in throughput, as high as ~+25%. </li>
+<li>Zephyr peak throughput is achieved at intervals under 40 ms interval.</li>
+<li>For GATT, the Zephyr experimental FSU branch achieves superior throughput than that of Nordic Semi's Soft Device Controller (SDC) at 7.5 ms by ~30 KB/s, and at 15 ms by 16 KB/s. </li>
+<li>For CoC, Zephyr and SDC are about the same without FSU at 15 ms. With FSU, Zephyr leads with ~15 KB/s.</li>
+<li>From around 25 ms interval, the Zephyr and SDC stacks converge, with Zephyr inching ahead of SDC by 4 - 18 KB/s with FSU on.</li>
+<li>SDC CoC gains about at +25.3%, or 31.6 KB/s at 7.5 ms.</li>
+<li>SDC GATT throughput bump one way at the shortest connection interval at 7.5 ms resulting in +31 KB/s, or a +24.4% throughput bump (with a RTT of ~12.6 ms). </li>
+<li>The maximum throughput bump for the open Zephyr GATT stack one way is approximately +32 KB/s, or a +~20% increase at 15 ms connection interval (with a RTT of ~27.3 ms).</li>
+<li>To roughly obtain round trip time (RTT) multiplying the interval times 1.5 - 2. For instance, an interval of 25 ms results in ~37.5 - 50 ms RTT.</li>
+<li>FSU benchmarks show throughput improvements in both GATT, and L2CAP CoCa variants. </li>
+<li>Duplex with FSU enabled approaches or exceeds 200 KB/s for both SDC, and Zephyr.</li>
+</ol>
+<h3>Latency under load</h3>
+<figure><img src="img/screenshot-2026-10-05-at-10-22-30-am.png" alt="" loading="lazy"></figure>
+
+<p>Through the benchmarks I noticed that as we ramp from 0 KB/s towards the upper end of throughput (e.g. 150 KB/s), the p99 latency increases ~three times (e.g. from ~20 ms to ~60 ms RTT). By pacing the send and holding the sender from firing off a send until the prior send is complete, latency is halved (i.e. queue management). Furthermore, simultaneously pacing signal, and also turning on FSU shows further ~15% latency  (5 ms) reduction. </p>
+<p>Concurrent load testing was conducted at 7.5 ms interval across Zephyr, and SDC stacks.  </p>
+<h3>Latency observations</h3>
+<ol>
+<li>Latency is "good enough" for the teleoperation use case.</li>
+<li>The benchmark work did not optimize for minimizing latency; it may be interesting to explore reducing latency for the realtime haptic feedback teleoperation use case (e.g. <a href="https://www.itu.int/epublications/publication/itu-t-y-3147-2025-04-quality-of-service-requirements-and-framework-of-deterministic-communications-for-remote-device-control-services-over-imt-2020-an">sub 20 ms RTT</a> performance requirement).</li>
+<li>The above said, GATT paced + FSU at 7.5 ms interval measures p99 16 - 19 ms, just below 20 ms at close range. The chart above shows values of ~20 - 28 ms with the boards spaced a bit further away.  </li>
+</ol>
+<h2>24 hour (*25.1 hours) Soak Test</h2>
+<figure><img src="img/screenshot-2026-09-14-at-7-57-32-pm.png" alt="" loading="lazy"></figure>
+
+<p>The soak test consisted of leaving devices stationary a few feet apart over the course of just over ~25 hours. </p>
+<p>Soak test numbers:</p>
+<ol>
+<li>Zero (0) disconnects, losses, and/or faults.</li>
+<li>4.9 million round trips, of which 58% equal to or under 15ms, 92% equal to or under 20 ms, and 99.7% equal to or under 30 ms, with the worst single RTT measurement logged at 94 ms. </li>
+<li>92 idle -&gt; saturated cycles.</li>
+</ol>
+<h2>Watchdog, lost heartbeat, and stop reaction time</h2>
+<p>Stop reaction time, upon heartbeat loss was physically confirmed via a watchdog + logic analyzer setup. The watchdog was programmed to issue a "STOP" command upon not detecting heartbeat for 200 ms. A physical STOP output was asserted about 200 ms after the last valid heartbeat.</p>
+<p>The test above provides example engineering design &amp; behavior of a robot in the worst-case scenario of 1. Wi-Fi loss, and 2. BLE backup link loss. </p>
+<h2>III The wireless robot teleoperations problem</h2>
+<p>In exploring the exciting to me frontier of robotics I set off on a path of tinkering to understand the bounds of current wireless teleoperations setups for robots. In the spirit of tinkering, I focus on open source stacks as much as possible, and stay away from proprietary closed source. </p>
+<p>A wired control link may not always be practicable if operating outside a controlled manufacturing environment.</p>
+<p>In the real world there are non-ideal internet connectivity conditions. Your robotic fleet may be operating in a fabrication yard, or a steel hull ship (<a href="https://nvlpubs.nist.gov/nistpubs/ams/NIST.AMS.300-9.pdf">https://nvlpubs.nist.gov/nistpubs/ams/NIST.AMS.300-9.pdf</a>, <a href="https://ieeexplore.ieee.org/abstract/document/9024035">https://ieeexplore.ieee.org/abstract/document/9024035</a>). </p>
+<p>There may be competing wireless signals - routers that implement modern Wi-Fi standards (e.g. Wi-Fi 5, 6, 6E) operate at 5 GHz, and/or 6 GHz frequencies, whereas BLE 5 operates at 2.4 GHz. Older Wi-Fi standards operate in the 2.4 GHz spectrum. Wi-Fi 6 also operates at 2.4 GHz, and Wi-Fi 7 Multi-Link Operation increases throughput by combining 2.4 GHz, 5 GHz, and/or 6 GHz frequency bands, which potentially re-introduces the 2.4 GHz Wi-Fi - Bluetooth interference problem. </p>
+<figure><img src="img/screenshot-2026-10-05-at-11-14-50-am.png" alt="" loading="lazy"></figure>
+
+<p>In benchmarking the performance of an example teleoperations modern stack (an article for another time) I asked myself - (how) might bluetooth serve as a backup safety &amp; control link? </p>
+<p>A wireless signal as a backup to another wireless signal may not be a good fit for wireless setup that does not minimize interference (e.g. Wi-Fi operating in the same 2.4 GHz band as BLE).</p>
+<p>However, when carefully designed wireless connectivity can serve as a way to reduce wireless fragility, and improve robot teleop heartbeat, and control robustness. </p>
+<p>The original questions I set out to answer. </p>
+<pre><code>1. What is BLE's measured, real-world throughput? 
+2. Specific to teleoperations, how does the throughput compare to the needs of a robotic teleoperations heartbeat, control operations?
+3. What is BLE's measured, real-world Latency? 
+4. How does latency compare to the real world demands of an actively controlled, or passively monitored teleoperator? 
+5. What are the benefits of the new BLE 6 capability in Frame Space Update (see 8.2.2.2. https://www.bluetooth.com/core-specification-6-feature-overview/)
+</code></pre>
+<h2>IV BLE 6 Frame space update (FSU)</h2>
+<p>Below is a simple graphic of the BLE 6 FSU functionality. In short, FSU update is designed to allow the reduction of the amount of waiting between chatter. </p>
+<figure><img src="img/screenshot-2026-10-05-at-11-40-45-am.png" alt="" loading="lazy"></figure>
+
+<p>Note that Zephyr negotiated 52 μs, whereas SDC advertises a negotiated value of 65 μs for a request for 2M only, or 70 μs for covering both 2M and 1M. The SDC value is reported, not measured.  </p>
+<p>While on paper this looks good, how does this translate in the real world in terms of throughput and latency improvements/changes (if any)? I didn't find information on the FSU topic.</p>
+<p>Via benchmarking I found that one-way throughput FSU benefit is immediately materialized at short connection interval of 7.5 ms for GATT and CoC regime. </p>
+<figure><img src="img/screenshot-2026-10-05-at-11-54-40-am.png" alt="" loading="lazy"></figure>
+
+<p>However, FSU does not show benefit for a duplex connection at the shortest connection interval of 7.5ms. There is insufficient space freed to fit an additional exchange in the interval alloted. </p>
+<figure><img src="img/screenshot-2026-10-05-at-12-10-28-pm.png" alt="" loading="lazy"></figure>
+
+<p>At some longer intervals, e.g. 25 ms, we see the same frame space benefit, which allows for additional exchanges, and therefore additional throughput. In essence any throughput benefits realized via the FSU update are interval dependent. </p>
+<h2>V What this does not prove</h2>
+<p>In this benchmarking study we establish real world maximum BLE 6 throughput numbers, latency upon load and pacing performance, soak test and reliability understanding, and stop time measurement.</p>
+<p>Although promising, these results are not a certification, nor do they guarantee uptime, downtime, latency, throughput and/or reliability.</p>
+<p>Recreation of the benchmark is encouraged, and welcome.</p>
+<p>Field interference conditions are not comprehensively conducted. </p>
+<h2>VI Technical details</h2>
+<h2>Hardware</h2>
+<p>A non-exhaustive search revealed Nordic Semi supports the latest BLE 5, 6 via hardware and firmware via the NRF-54 dev kit (<a href="https://www.nordicsemi.com/Products/Development-hardware/nRF54L15-DK">https://www.nordicsemi.com/Products/Development-hardware/nRF54L15-DK</a>). I obtained a couple of nRF54 dev kits (<a href="https://docs.nordicsemi.com/r/bundle/ug_nrf54l15_dk/page/ug/nrf54l15_dk/intro/intro.html">https://docs.nordicsemi.com/r/bundle/ug_nrf54l15_dk/page/ug/nrf54l15_dk/intro/intro.html</a>, along with a nRF52 dev kit (<a href="https://www.nordicsemi.com/Products/Development-hardware/nRF52-DK">https://www.nordicsemi.com/Products/Development-hardware/nRF52-DK</a>) and nRF52 dongle (<a href="https://www.nordicsemi.com/Products/Development-hardware/nRF52840-Dongle">https://www.nordicsemi.com/Products/Development-hardware/nRF52840-Dongle</a>).</p>
+<p>Beware of imitations, and batches that don't pass the quality bar from non-name vendors. Mouser (<a href="https://www.mouser.com">https://www.mouser.com</a>) delivered working hardware near instantly. I will use them going forward for hardware tinkering projects.</p>
+<figure><img src="img/pasted-image-20260823172408.png" alt="" loading="lazy" width="428"></figure>
+
+<p>One of the nRF54 dk test boards I used</p>
+<h2>Firmware - Nordic SDC</h2>
+<p>Nordic Semi carries some flavor of proprietary firmware (<a href="https://academy.nordicsemi.com/courses/nrf-connect-sdk-fundamentals/">https://academy.nordicsemi.com/courses/nrf-connect-sdk-fundamentals/</a>). Nordic's SoftDevice controller (SDC) is measured. The closed source nature of SDC means that we know less about the internals than we do of Zephyr open source equivalent firmware. </p>
+<h2>Open source Zephyr</h2>
+<p>From a risk tradeoff perspective the "many eyes" theory (extended by the age of agents) lends open source bugs to being found, solutions, and improvements being discovered. </p>
+<p>Thankfully the wizards developing Zephyr (<a href="https://github.com/zephyrproject-rtos/zephyr">https://github.com/zephyrproject-rtos/zephyr</a>)  continuously work at supporting the latest BLE spec, and have taken steps towards implementing the BLE 6 frame space update. In my benchmarking I build on top of prior Zephyr and FSU work. Zephyr enables the benchmarks below, and for which I am humbly grateful. </p>
+<p>WIP/prior closed and/or non-merged PRs that have to do with FSU:<br>
+<a href="https://github.com/zephyrproject-rtos/zephyr/pull/82324">https://github.com/zephyrproject-rtos/zephyr/pull/82324</a> (closed)<br>
+<a href="https://github.com/zephyrproject-rtos/zephyr/pull/99473">https://github.com/zephyrproject-rtos/zephyr/pull/99473</a> (open)<br>
+<a href="https://github.com/zephyrproject-rtos/zephyr/pull/93783">https://github.com/zephyrproject-rtos/zephyr/pull/93783</a> (merged, host side)</p>
+<h2>Zephyr Version</h2>
+<p>Testing was performed on Zephyr v4.4.2 through October 2026. It is noted that the expected date for Zephyr v4.5 is in a few weeks time near end October 2026. v4.5 changes L2CAP timing, which could affect CoC results. Through benchmarking CoC numbers, my experience has been that CoC numbers are particularly sensitive to the credit mechanism.  </p>
+<h3>Zephyr CoC Bug</h3>
+<p>Through benchmarking, an undocumented L2CAP CoC bug was discovered, and filed in Zephyr issues: <a href="https://github.com/zephyrproject-rtos/zephyr/issues/121544">https://github.com/zephyrproject-rtos/zephyr/issues/121544</a>. The bug was recreated reliably, and a solution/patch outlined. As of Zephyr v4.4.2 this bug is not resolved. </p>
+<h2>Setup</h2>
+<p>Interference, and distance variables did not factor in these benchmarks. Bluetooth boards were within several inches to feet of each other.  </p>
+<h2>Firmware</h2>
+<p><strong>Nordic SoftDevice Controller:</strong> from <strong>nRF Connect SDK v3.4.0</strong>, with CONFIG_BT_LL_SOFTDEVICE=y.</p>
+<ul>
+<li>
+<p>Reported controller firmware: <strong>Version 200.12506, Build 888207768</strong></p>
+</li>
+<li>
+<p>HCI version: <strong>6.3</strong>, revision 0x3039</p>
+</li>
+<li>
+<p><strong>Open Zephyr controller:</strong> <strong>upstream Zephyr v4.4.2</strong> (gatt-fsu-clean, pin fee9fbc, v4.4.2-16)</p>
+<ul>
+<li>The FSU tests applied the custom fsu-m0 patch series on top of that base.</li>
+</ul>
+</li>
+</ul>
+<h2>Sniffer</h2>
+<p>As I don't have ten thousand $ to drop for a professional analyzer/sniffer, a software sniffer was purpose built to solve the problem of physically verifying on-air gap reductions (i.e. FSU reductions) from 150 microseconds to 100; from 150 to 52.</p>
+<p>The sniffer was useful in troubleshooting complex jumble of parameters, in addition to initial FSU negotiation. </p>
+<p><a href="https://nordicsemi.com/Products/Development-hardware/nRF52-DK">NRF52 dk board </a>was used as the hardware substrate as sniffer between the nRF54 dk boards. </p>
+<h2>Logic analyzer</h2>
+<p>A <a href="https://www.mouser.com/en/ProductDetail/SparkFun/TOL-18627?qs=Rp5uXu7WBW%2Fm5v6HVJVm6A%3D%3D">logic analyzer</a> was used to confirm what happened after Bluetooth communication abruptly stopped. The hardware safety-chain response was verified using the logic analyzer.  </p>
+<h2>About me</h2>
+<p>I'm a human non-dev who uses agents to tinker - mistakes are very possible, and nearly guaranteed. Please proceed with caution.</p>
+<p>I am not paid by any company to purchase or recommend hardware, or achieve results a certain way. </p>
+<p>Certainly there is space for optimization.</p>
+<p>I am intrigued by the intersection of hardware, software, and robotics real world civilization building use cases. </p>
+<p>If you're looking for a product tinkerer who has experience:<br>
+-working with developers, <br>
+-building relationships with customers, and<br>
+-tinkering</p>
+<p>write me. </p>
+<figure><img src="img/screenshot-2026-08-24-at-10-53-19-am.png" alt="" loading="lazy"></figure>
+
+<h2>VII Reproduce, audit, and raw data</h2>
+<p>Below are firmware, data, and software used to conduct the benchmarks/engineering measurements &amp; characterization. </p>
+<p>Agents were used to build, and iterate software and firmware. Agents have completely written all docs, code, patches etc. linked below. </p>
+<h2>Build, and reproduce</h2>
+<ul>
+<li>
+<p><a href="https://github.com/teleop-bench/BLE-bench-pub/blob/main/REPRODUCE.md">Tested source revision and build instructions</a></p>
+<ul>
+<li>
+<p><a href="https://github.com/teleop-bench/BLE-bench-pub/blob/main/zephyr-patches/fsu-m0-series/README.md">Custom open-Zephyr FSU controller patch series</a></p>
+</li>
+<li>
+<p><a href="https://github.com/teleop-bench/BLE-bench-pub/blob/main/zephyr-patches/fsu-m0-series/provenance/PROVENANCE.md">FSU patch and build provenance</a></p>
+</li>
+<li>
+<p><a href="https://github.com/teleop-bench/BLE-bench-pub/blob/main/zephyr-patches/fsu-m0-series/assert_fsu_config.py">FSU configuration validator</a></p>
+</li>
+<li>
+<p><a href="https://github.com/teleop-bench/BLE-bench-pub/tree/main/apps/nrf54l15/z54-lat-central">Central benchmark application</a></p>
+</li>
+<li>
+<p><a href="https://github.com/teleop-bench/BLE-bench-pub/tree/main/apps/nrf54l15/z54-lat-periph">Peripheral benchmark application</a></p>
+</li>
+<li>
+<p><a href="https://github.com/teleop-bench/BLE-bench-pub/tree/main/apps/nrf52/pca10040-radio-observer">Passive radio observer firmware</a></p>
+</li>
+<li>
+<p><a href="https://github.com/teleop-bench/BLE-bench-pub/tree/main/apps/misc/q2-central">Observer runner and analyzers</a></p>
+</li>
+</ul>
+</li>
+</ul>
+<p>---</p>
+</main>
+<footer><a href="https://github.com/teleop-bench/BLE-bench-pub">GitHub: teleop-bench/BLE-bench-pub</a></footer>
+</body>
+</html>
