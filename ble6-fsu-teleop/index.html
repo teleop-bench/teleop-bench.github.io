@@ -218,7 +218,10 @@ footer a{color:var(--muted)}
 <h2>Zephyr Version</h2>
 <p>Testing was performed on Zephyr v4.4.2 through October 2026. It is noted that the expected date for Zephyr v4.5 is in a few weeks time near end October 2026. v4.5 changes L2CAP timing, which could affect CoC results. Through benchmarking CoC numbers, my experience has been that CoC numbers are particularly sensitive to the credit mechanism.  </p>
 <h3>Zephyr CoC Bug</h3>
-<p>Through benchmarking, an undocumented L2CAP CoC bug was discovered, and filed in Zephyr issues: <a href="https://github.com/zephyrproject-rtos/zephyr/issues/121544">https://github.com/zephyrproject-rtos/zephyr/issues/121544</a>. The bug was recreated reliably, and a solution/patch outlined. As of Zephyr v4.4.2 this bug is not resolved. </p>
+<p>Through benchmarking, an undocumented L2CAP CoC bug was discovered, and filed in Zephyr issues: <a href="https://github.com/zephyrproject-rtos/zephyr/issues/121544">https://github.com/zephyrproject-rtos/zephyr/issues/121544</a>. The bug was recreated reliably, and a solution/patch outlined. <br>
+<em>Edit 10/13/26:</em><br>
+<del>As of Zephyr v4.4.2 this bug is not resolved.</del></p>
+<p>The L2CAP bug was resolved on October 13, 2026. Very fast fix by <a href="https://github.com/jhedberg">jhedberg</a> and other maintainers. Fix is expected to ship on v4.5.0, scheduled for end October 2026.</p>
 <h2>Setup</h2>
 <p>Interference, and distance variables did not factor in these benchmarks. Bluetooth boards were within several inches to feet of each other.  </p>
 <h2>Firmware</h2>

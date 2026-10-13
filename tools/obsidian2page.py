@@ -13,6 +13,7 @@ What it does (and reports):
   - Lists: normalizes indentation (lines indented 4+ spaces would otherwise render as code blocks) and adds the blank
     line Markdown needs before a list that follows a paragraph.
   - A line starting with several asterisks (e.g. '****duplex entries') is escaped so it renders as a single '*'.
+  - Obsidian strikethrough  ~~text~~  -> <del>text</del>.
   - Bare URLs become links; single line breaks are kept (as Obsidian shows them); headings are shifted so the
     page title is the only <h1>.
 Nothing is published by this script; it only writes files into --out.
@@ -155,7 +156,7 @@ def main():
     ap.add_argument('--home', help='also write the site home page (e.g. index.html at the site root) linking to this post')
     ap.add_argument('--site-name', default='teleopbench'); ap.add_argument('--date', help='post date shown on the home page (YYYY-MM-DD)')
     a = ap.parse_args()
-    report = {'blank_before_list': 0, 'lists_normalized': 0, 'asterisks_escaped': 0, 'embeds': 0, 'meta_stripped': 0}
+    report = {'blank_before_list': 0, 'lists_normalized': 0, 'asterisks_escaped': 0, 'embeds': 0, 'meta_stripped': 0, 'strikethrough': 0}
     title = a.title or re.sub(r'\.+$', '', os.path.basename(a.note)[:-3] if a.note.endswith('.md') else os.path.basename(a.note))
     src = open(a.note, encoding='utf-8').read()
     lines = src.splitlines()
@@ -232,6 +233,14 @@ def main():
     if shift:
         text = re.sub(r'^(#{1,6})(\s)', lambda m: '#' * max(1, len(m.group(1)) - shift) + m.group(2), text, flags=re.M)
 
+    # Obsidian strikethrough  ~~text~~  -> <del> (python-markdown has none); Obsidian also strikes '~~text ~~'
+    mask = fenced_mask(text.splitlines()); out = []
+    for k, l in enumerate(text.splitlines()):
+        if not mask[k]:
+            l, n = re.subn(r'~~(?=\S)(.+?)\s*~~', r'<del>\1</del>', l); report['strikethrough'] += n
+        out.append(l)
+    text = '\n'.join(out)
+
     body = markdown.markdown(text, extensions=['tables', 'fenced_code', 'nl2br', 'sane_lists'], output_format='html5')
     first_p = re.search(r'<p>(.*?)</p>', body, re.S)
     desc = re.sub(r'<[^>]+>', '', first_p.group(1)).strip() if first_p else title
@@ -286,7 +295,8 @@ def main():
 
     print(f'wrote {os.path.join(a.out, "index.html")}  ({len(page)//1024} KB)')
     print(f'fixes: {report["asterisks_escaped"]} asterisk run(s) escaped; {report["blank_after_table"]} blank line(s) added after tables; {report["lists_normalized"]} list block(s) re-indented; '
-          f'{report["blank_before_list"]} blank line(s) added before lists; {report["embeds"]} image embed(s) put on their own line')
+          f'{report["blank_before_list"]} blank line(s) added before lists; {report["embeds"]} image embed(s) put on their own line; '
+          f'{report["strikethrough"]} strikethrough(s)')
     print(f'images: {len(copied)} copied ({report["meta_stripped"]} metadata chunk(s) stripped: EXIF/XMP/text), {len(missing)} missing' + ''.join(f'\n  MISSING: {n}' for n in missing))
     print(f'images without alt text: {report["embeds"]} (Obsidian embeds carry none; consider adding descriptions)')
     for t in schemeless:
