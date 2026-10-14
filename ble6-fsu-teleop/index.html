@@ -30,6 +30,7 @@ footer a{color:var(--muted)}
 <body>
 <main>
 <h1>Can Bluetooth Low Energy 6.0 Back Up Wi-Fi Robotic Teleop? Throughput, Latency, FSU, Soak, and Physical Stop Testing</h1>
+<h3>Zephyr open controller vs Nordic Semi SoftDevice Controller on nRF54L15 dev kit boards</h3>
 <h2>I. Executive Summary</h2>
 <p>Benchmarking bluetooth low energy hardware, at peak one-way throughput of up to ~195 KB/s is measured using the open source <a href="https://github.com/zephyrproject-rtos/zephyr">Zephyr</a> GATT stack. Duplex GATT Zephyr numbers exceed 200 KB/s. Included for side-by-side comparison are Nordic Semi closed sourced SDC runs. </p>
 <p>A 25 hour soak test reveals a stable connection in a close proximity bench test, and shows zero disconnects, timeouts across 4.9 million round trips. If heartbeat stops, a watchdog confirms via hardware that a STOP command is implemented within just over 200 ms. </p>
